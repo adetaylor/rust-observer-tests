@@ -1,18 +1,18 @@
-use std::rc::{Rc,Weak};
 use std::cell::RefCell;
+use std::rc::{Rc, Weak};
 
 trait Observer {
     fn event_occurred(&mut self);
 }
 
 struct ObserverRegistry {
-    observers: Vec<Weak<RefCell<dyn Observer>>>
+    observers: Vec<Weak<RefCell<dyn Observer>>>,
 }
 
 impl ObserverRegistry {
     fn new() -> Self {
         ObserverRegistry {
-            observers: Vec::new()
+            observers: Vec::new(),
         }
     }
 
@@ -30,13 +30,13 @@ impl ObserverRegistry {
 }
 
 struct EventGenerator {
-    observers: ObserverRegistry
+    observers: ObserverRegistry,
 }
 
 impl EventGenerator {
     fn new() -> Self {
         EventGenerator {
-            observers: ObserverRegistry::new()
+            observers: ObserverRegistry::new(),
         }
     }
 }
@@ -62,7 +62,7 @@ impl EventConsumerA {
 }
 
 struct EventConsumerB {
-    counter: usize
+    counter: usize,
 }
 
 impl Observer for EventConsumerA {
@@ -73,9 +73,7 @@ impl Observer for EventConsumerA {
 
 impl EventConsumerB {
     fn new() -> Self {
-        EventConsumerB{
-            counter: 0
-        }
+        EventConsumerB { counter: 0 }
     }
 
     fn handle_event_which_occurred(&mut self) {
@@ -96,7 +94,7 @@ impl Observer for EventConsumerB {
 
 fn main() {
     let mut gen = EventGenerator::new();
-    let consumer_a = Rc::new(RefCell::new(EventConsumerA{}));
+    let consumer_a = Rc::new(RefCell::new(EventConsumerA {}));
     let consumer_b = Rc::new(RefCell::new(EventConsumerB::new()));
 
     let listener_a = Rc::downgrade(&consumer_a);
