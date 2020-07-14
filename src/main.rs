@@ -1,9 +1,12 @@
+use std::rc::{Rc,Weak};
+use std::cell::RefCell;
+
 trait Observer {
-    fn event_occurred(&self);
+    fn event_occurred(&mut self);
 }
 
 struct ObserverRegistry {
-    observers: Vec<Box<dyn Observer>>
+    observers: Vec<Weak<RefCell<dyn Observer>>>
 }
 
 impl ObserverRegistry {
@@ -13,13 +16,15 @@ impl ObserverRegistry {
         }
     }
 
-    fn notify(&self) {
-        for a in self.observers {
-            a.event_occurred();
+    fn notify(&mut self) {
+        for a in &self.observers {
+            if let Some(a) = a.upgrade() {
+                a.borrow_mut().event_occurred();
+            }
         }
     }
 
-    fn register(&mut self, observer: &mut Observer) {
+    fn register(&mut self, observer: Weak<RefCell<dyn Observer>>) {
         self.observers.push(observer);
     }
 }
@@ -37,13 +42,13 @@ impl EventGenerator {
 }
 
 impl EventGenerator {
-    fn do_something(&self) {
+    fn do_something(&mut self) {
         println!("About to notify observers");
         self.observers.notify();
         println!("Finished notifying observers");
     }
 
-    fn register(&mut self, observer: &mut Observer) {
+    fn register(&mut self, observer: Weak<RefCell<dyn Observer>>) {
         self.observers.register(observer);
     }
 }
@@ -61,7 +66,7 @@ struct EventConsumerB {
 }
 
 impl Observer for EventConsumerA {
-    fn event_occurred(&self) {
+    fn event_occurred(&mut self) {
         self.handle_event_which_occurred();
     }
 }
@@ -84,23 +89,25 @@ impl EventConsumerB {
 }
 
 impl Observer for EventConsumerB {
-    fn event_occurred(&self) {
+    fn event_occurred(&mut self) {
         self.handle_event_which_occurred();
     }
 }
 
 fn main() {
-    let gen = EventGenerator::new();
-    let consumer_a = EventConsumerA{};
-    let mut consumer_b = EventConsumerB::new();
+    let mut gen = EventGenerator::new();
+    let consumer_a = Rc::new(RefCell::new(EventConsumerA{}));
+    let consumer_b = Rc::new(RefCell::new(EventConsumerB::new()));
 
-    gen.register(&consumer_a);
-    gen.register(&mut consumer_b);
+    let listener_a = Rc::downgrade(&consumer_a);
+    gen.register(listener_a);
+    let listener_b = Rc::downgrade(&consumer_b);
+    gen.register(listener_b);
 
     gen.do_something();
     gen.do_something();
 
-    consumer_b.report();
+    consumer_b.borrow().report();
 
     println!("Hello, world!");
 }
